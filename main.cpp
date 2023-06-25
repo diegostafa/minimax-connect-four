@@ -161,16 +161,11 @@ int main()
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(30);
 
-    Shader shader = LoadShader("shader.vs", "shader.fs");
-
-    float intensity = 0.5f;
-    SetShaderValue(shader, GetShaderLocation(shader, "intensity"), &intensity, SHADER_UNIFORM_FLOAT);
-
     while (!WindowShouldClose())
     {
         BeginDrawing();
-        ClearBackground(BLACK);
         {
+            ClearBackground(BLACK);
             if (!game.isGameOver())
             {
                 handleMouseInput(game);
@@ -180,14 +175,11 @@ int main()
 
             handleKeyboardInput(game);
             render(game);
-
             drawLog();
         }
         EndDrawing();
     }
 
-    UnloadShader(shader);
     CloseWindow();
-
     return 0;
 }
