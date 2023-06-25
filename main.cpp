@@ -6,8 +6,7 @@
 
 std::string G_log = "";
 
-std::pair<int, ConnectFour::Move> minimax(
-    ConnectFour &game, int alpha, int beta, int maxDepth = 10)
+std::pair<int, ConnectFour::Move> minimax(ConnectFour &game, int alpha, int beta, int maxDepth = 10)
 {
     if (maxDepth == 0)
         return {game.evaluate(), -1};
