@@ -1,8 +1,6 @@
 #include "connect_four.cpp"
 #include <math.h>
 #include <string>
-#include <unordered_map>
-#include <cassert>
 
 #include "raylib.h"
 
@@ -95,7 +93,7 @@ void handleAI(ConnectFour &game)
         G_log = "PLAYER 2 HAS A FORCED WIN";
 }
 
-void handleGameOver(ConnectFour &game)
+void handleGameOver(const ConnectFour &game)
 {
     if (game.isGameOver())
     {
@@ -119,7 +117,7 @@ void handleKeyboardInput(ConnectFour &game)
     }
 }
 
-void render(ConnectFour &game)
+void render(const ConnectFour &game)
 {
     float tile_w = GetScreenWidth() / BOARD_SIZE;
     float tile_h = GetScreenHeight() / BOARD_SIZE;
@@ -181,8 +179,8 @@ int main()
             }
 
             handleKeyboardInput(game);
-
             render(game);
+
             drawLog();
         }
         EndDrawing();
