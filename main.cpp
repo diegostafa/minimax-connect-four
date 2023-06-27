@@ -1,7 +1,7 @@
 #include <raylib.h>
 
-#include "connect_four.cpp"
 #include "ai_algorithms.cpp"
+#include "connect_four.cpp"
 
 std::string G_log = "";
 int G_focusedColumn = -1;
@@ -15,7 +15,7 @@ void drawLog()
 
 void handleColumnFocus(const ConnectFour &game)
 {
-    G_focusedColumn = GetMousePosition().x / (GetScreenWidth() / game.boardSize());
+    G_focusedColumn = (int)GetMousePosition().x / (GetScreenWidth() / game.boardSize());
 }
 
 void handleUserTurn(ConnectFour &game)
@@ -39,13 +39,12 @@ void handleOpponentTurn(ConnectFour &game)
     else
         game.makeMove(bestMove.second);
 
-    if (bestMove.first == 0)
-        G_log = "I CAN DRAW";
-    else if (bestMove.first == std::numeric_limits<int>::max())
+    if (bestMove.first == std::numeric_limits<int>::max())
         G_log = "YOU HAVE A FORCED WIN";
     else if (bestMove.first == std::numeric_limits<int>::min())
         G_log = "I HAVE A FORCED WIN";
 }
+
 void handleGameOver(const ConnectFour &game)
 {
     if (game.isGameOver())
@@ -72,8 +71,8 @@ void handleKeyboardInput(ConnectFour &game)
 
 void render(const ConnectFour &game)
 {
-    float tile_w = GetScreenWidth() / game.boardSize();
-    float tile_h = GetScreenHeight() / game.boardSize();
+    int tile_w = GetScreenWidth() / game.boardSize();
+    int tile_h = GetScreenHeight() / game.boardSize();
 
     for (int i = 1; i < game.boardSize() - 1; i++)
     {
@@ -83,20 +82,19 @@ void render(const ConnectFour &game)
             int posY = (game.boardSize() - 1 - i) * tile_h;
 
             if (j == G_focusedColumn)
-                DrawRectangle(
-                    posX, posY,
-                    tile_w, tile_h,
-                    {255, 0, 0, 50});
+                DrawRectangle(posX, posY, tile_w, tile_h, {255, 0, 0, 50});
 
             DrawRectangleLines(posX, posY, tile_w, tile_h, WHITE);
 
             switch (game.at(i, j))
             {
             case ConnectFour::Piece::PLAYER1:
-                DrawCircle(posX + tile_w / 2, posY + tile_h / 2, std::min(tile_w, tile_h) / 3, RED);
+                DrawCircle(posX + tile_w / 2, posY + tile_h / 2, (float)std::min(tile_w, tile_h) / 3, RED);
                 break;
             case ConnectFour::Piece::PLAYER2:
-                DrawCircle(posX + tile_w / 2, posY + tile_h / 2, std::min(tile_w, tile_h) / 3, BLUE);
+                DrawCircle(posX + tile_w / 2, posY + tile_h / 2, (float)std::min(tile_w, tile_h) / 3, BLUE);
+                break;
+            default:
                 break;
             }
         }

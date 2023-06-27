@@ -9,7 +9,7 @@ class ConnectFour
 {
 private:
     static const int BOARD_SIZE = 8;
-    const int _connectionLength = 4;
+    const unsigned int _connectionLength = 4;
 
 public:
     typedef int Move;
@@ -175,8 +175,8 @@ public:
 
 private:
     Piece _board[BOARD_SIZE][BOARD_SIZE];
-    bool _isGameOver;
     bool _turn;
+    bool _isGameOver;
 
     bool
     checkConnectedPieces(Piece piece, int connectionLength) const
