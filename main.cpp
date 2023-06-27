@@ -1,97 +1,51 @@
-#include "connect_four.cpp"
-#include <math.h>
-#include <string>
+#include <raylib.h>
 
-#include "raylib.h"
+#include "connect_four.cpp"
+#include "ai_algorithms.cpp"
 
 std::string G_log = "";
+int G_focusedColumn = -1;
 
-std::pair<int, ConnectFour::Move> minimax(ConnectFour &game, int alpha, int beta, int maxDepth = 10)
+void drawLog()
 {
-    if (maxDepth == 0)
-        return {game.evaluate(), -1};
-
-    if (game.isGameOver())
-        return {game.utility(), -1};
-
-    if (game.isYourTurn())
-    {
-        int bestScore = MIN_VALUE;
-        int bestMove = -1;
-        for (auto &&move : game.getPossibleMoves())
-        {
-            auto nextState = game;
-            nextState.makeMove(move);
-            auto evaluatedMove = minimax(nextState, alpha, beta, maxDepth - 1);
-            if (evaluatedMove.first > bestScore)
-            {
-                bestScore = evaluatedMove.first;
-                bestMove = move;
-            }
-
-            alpha = std::max(alpha, bestScore);
-
-            if (beta <= alpha)
-                break;
-        }
-        return {bestScore, bestMove};
-    }
-    else
-    {
-        int bestScore = MAX_VALUE;
-        int bestMove = -1;
-        for (auto &&move : game.getPossibleMoves())
-        {
-            auto nextState = game;
-            nextState.makeMove(move);
-            auto evaluatedMove = minimax(nextState, alpha, beta, maxDepth - 1);
-            if (evaluatedMove.first < bestScore)
-            {
-                bestScore = evaluatedMove.first;
-                bestMove = move;
-            }
-
-            beta = std::min(beta, bestScore);
-
-            if (beta <= alpha)
-                break;
-        }
-        return {bestScore, bestMove};
-    }
+    const float fontSize = 30.0f;
+    auto textWidth = MeasureText(G_log.c_str(), fontSize);
+    DrawText(G_log.c_str(), (GetScreenWidth() / 2) - textWidth / 2, 15, fontSize, WHITE);
 }
 
-void handleMouseInput(ConnectFour &game)
+void handleColumnFocus(const ConnectFour &game)
+{
+    G_focusedColumn = GetMousePosition().x / (GetScreenWidth() / game.boardSize());
+}
+
+void handleUserTurn(ConnectFour &game)
 {
     if (!game.isYourTurn())
         return;
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-    {
-        auto colSize = GetScreenWidth() / BOARD_SIZE;
-        auto column = GetMousePosition().x / colSize;
-        game.makeMove(column);
-    }
+        game.makeMove(G_focusedColumn);
 }
 
-void handleAI(ConnectFour &game)
+void handleOpponentTurn(ConnectFour &game)
 {
     if (game.isYourTurn())
         return;
 
-    auto bestMove = minimax(game, MIN_VALUE, MAX_VALUE);
+    auto bestMove = minimax(game, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+
     if (bestMove.second == -1)
         game.makeMove(game.getPossibleMoves()[0]);
     else
         game.makeMove(bestMove.second);
 
     if (bestMove.first == 0)
-        G_log = "I CAN'T DO ANYTHING BETTER THAN A DRAW";
-    if (bestMove.first == MAX_VALUE)
-        G_log = "PLAYER 1 HAS A FORCED WIN";
-    if (bestMove.first == MIN_VALUE)
-        G_log = "PLAYER 2 HAS A FORCED WIN";
+        G_log = "I CAN DRAW";
+    else if (bestMove.first == std::numeric_limits<int>::max())
+        G_log = "YOU HAVE A FORCED WIN";
+    else if (bestMove.first == std::numeric_limits<int>::min())
+        G_log = "I HAVE A FORCED WIN";
 }
-
 void handleGameOver(const ConnectFour &game)
 {
     if (game.isGameOver())
@@ -118,15 +72,22 @@ void handleKeyboardInput(ConnectFour &game)
 
 void render(const ConnectFour &game)
 {
-    float tile_w = GetScreenWidth() / BOARD_SIZE;
-    float tile_h = GetScreenHeight() / BOARD_SIZE;
+    float tile_w = GetScreenWidth() / game.boardSize();
+    float tile_h = GetScreenHeight() / game.boardSize();
 
-    for (int i = 1; i < BOARD_SIZE - 1; i++)
+    for (int i = 1; i < game.boardSize() - 1; i++)
     {
-        for (int j = 1; j < BOARD_SIZE - 1; j++)
+        for (int j = 1; j < game.boardSize() - 1; j++)
         {
             int posX = j * tile_w;
-            int posY = (BOARD_SIZE - 1 - i) * tile_h;
+            int posY = (game.boardSize() - 1 - i) * tile_h;
+
+            if (j == G_focusedColumn)
+                DrawRectangle(
+                    posX, posY,
+                    tile_w, tile_h,
+                    {255, 0, 0, 50});
+
             DrawRectangleLines(posX, posY, tile_w, tile_h, WHITE);
 
             switch (game.at(i, j))
@@ -142,40 +103,32 @@ void render(const ConnectFour &game)
     }
 }
 
-void drawLog()
-{
-    const float fontSize = 30.0f;
-    auto textWidth = MeasureText(G_log.c_str(), fontSize);
-    DrawText(G_log.c_str(), (GetScreenWidth() / 2) - textWidth / 2, 15, fontSize, WHITE);
-}
-
 int main()
 {
     ConnectFour game;
 
-    int screen_w = 800;
-    int screen_h = 800;
-
-    InitWindow(screen_w, screen_h, "Minimax Connect4");
+    InitWindow(800, 800, "Minimax Connect4");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(30);
 
     while (!WindowShouldClose())
     {
         BeginDrawing();
-        {
-            ClearBackground(BLACK);
-            if (!game.isGameOver())
-            {
-                handleMouseInput(game);
-                handleAI(game);
-                handleGameOver(game);
-            }
+        ClearBackground(BLACK);
 
-            handleKeyboardInput(game);
-            render(game);
-            drawLog();
+        handleColumnFocus(game);
+        handleKeyboardInput(game);
+
+        if (!game.isGameOver())
+        {
+            handleUserTurn(game);
+            handleOpponentTurn(game);
+            handleGameOver(game);
         }
+
+        render(game);
+        drawLog();
+
         EndDrawing();
     }
 
