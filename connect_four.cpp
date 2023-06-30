@@ -1,18 +1,16 @@
 #ifndef CONNECT_FOUR_CPP
 #define CONNECT_FOUR_CPP
 
-#include <iostream>
 #include <vector>
 #include <limits>
 
 class ConnectFour
 {
-private:
-    static const int BOARD_SIZE = 8;
-    const unsigned int _connectionLength = 4;
-
 public:
+    static const int ROWS = 7;
+    static const int COLS = 7;
     typedef int Move;
+
     enum Piece
     {
         EMPTY,
@@ -25,31 +23,26 @@ public:
           _turn(true),
           _isGameOver(false) {}
 
-    int
-    boardSize() const
+    inline Piece
+    pieceToPlay() const
     {
-        return BOARD_SIZE;
+        return _turn ? Piece::PLAYER1 : Piece::PLAYER2;
     }
 
-    bool
-    isYourTurn() const
+    inline bool
+    isMaxTurn() const
     {
         return _turn;
     }
 
-    bool
+    inline bool
     isGameOver() const
     {
         return _isGameOver;
     }
 
-    Piece pieceToPlay() const
-    {
-        return _turn ? Piece::PLAYER1 : Piece::PLAYER2;
-    }
-
-    Piece
-    at(int x, int y) const
+    inline Piece
+    pieceAt(int x, int y) const
     {
         return _board[x][y];
     }
@@ -60,13 +53,16 @@ public:
         if (_isGameOver)
             return;
 
-        auto freeRow = getFirstFreeRow(column);
+        const int freeRow = getFirstFreeRow(column);
+
         if (freeRow != -1)
         {
-            auto piece = pieceToPlay();
+            const Piece piece = pieceToPlay();
             _board[freeRow][column] = piece;
-            _turn = !_turn;
             _isGameOver = checkConnectFour(piece) || isBoardFull();
+
+            if (!_isGameOver)
+                _turn = !_turn;
         }
     }
 
@@ -74,29 +70,100 @@ public:
     getPossibleMoves() const
     {
         std::vector<Move> possibleColumns;
-        possibleColumns.reserve(BOARD_SIZE - 2);
+        possibleColumns.reserve(COLS);
 
-        for (unsigned int i = 1; i < BOARD_SIZE - 1; i++)
-        {
-            auto freeRow = getFirstFreeRow(i);
-            if (freeRow != -1)
+        for (int i = 0; i < COLS; i++)
+            if (getFirstFreeRow(i) != -1)
                 possibleColumns.push_back(i);
-        }
 
         return possibleColumns;
     }
 
-    bool
+    inline bool
     checkConnectFour(Piece piece) const
     {
         return checkConnectedPieces(piece, _connectionLength);
     }
 
+    std::vector<std::pair<int, int>>
+    getWinConnection() const
+    {
+        std::vector<std::pair<int, int>> winConnection;
+        const Piece piece = pieceToPlay();
+        winConnection.reserve(_connectionLength);
+
+        for (int i = 0; i < ROWS; i++)
+            for (int j = 0; j < COLS; j++)
+            {
+                if (j + _connectionLength <= COLS)
+                {
+                    bool connection = true;
+                    for (int c = 0; c < _connectionLength; c++)
+                    {
+                        connection = connection && _board[i][j + c] == piece;
+                        if (connection)
+                            winConnection.push_back({i, j + c});
+                    }
+                    if (connection)
+                        return winConnection;
+                    else
+                        winConnection.clear();
+                }
+
+                if (i + _connectionLength <= ROWS)
+                {
+                    bool connection = true;
+                    for (int c = 0; c < _connectionLength; c++)
+                    {
+                        connection = connection && _board[i + c][j] == piece;
+                        if (connection)
+                            winConnection.push_back({i + c, j});
+                    }
+                    if (connection)
+                        return winConnection;
+                    else
+                        winConnection.clear();
+                }
+
+                if (i + _connectionLength <= COLS && j + _connectionLength <= ROWS)
+                {
+                    bool connection = true;
+                    for (int c = 0; c < _connectionLength; c++)
+                    {
+                        connection = connection && _board[i + c][j + c] == piece;
+                        if (connection)
+                            winConnection.push_back({i + c, j + c});
+                    }
+                    if (connection)
+                        return winConnection;
+                    else
+                        winConnection.clear();
+                }
+
+                if (i - _connectionLength >= 0 && j + _connectionLength <= COLS)
+                {
+                    bool connection = true;
+                    for (int c = 0; c < _connectionLength; c++)
+                    {
+                        connection = connection && _board[i - c][j + c] == piece;
+                        if (connection)
+                            winConnection.push_back({i - c, j + c});
+                    }
+                    if (connection)
+                        return winConnection;
+                    else
+                        winConnection.clear();
+                }
+            }
+
+        return winConnection;
+    }
+
     bool
     isBoardFull() const
     {
-        for (unsigned int i = 1; i < BOARD_SIZE - 1; i++)
-            for (unsigned int j = 1; j < BOARD_SIZE - 1; j++)
+        for (int i = 0; i < ROWS; i++)
+            for (int j = 0; j < COLS; j++)
                 if (_board[i][j] == Piece::EMPTY)
                     return false;
 
@@ -121,7 +188,7 @@ public:
         int valuePlayer1 = 0;
         int valuePlayer2 = 0;
 
-        for (unsigned int i = 1; i < _connectionLength; i++)
+        for (int i = 1; i < _connectionLength; i++)
         {
             valuePlayer1 +=
                 checkConnectedPieces(Piece::PLAYER1, i) * 10 * i;
@@ -134,84 +201,77 @@ public:
     }
 
     void
-    prettyPrint() const
-    {
-        for (unsigned int i = 0; i < BOARD_SIZE; i++)
-        {
-            for (unsigned int j = 0; j < BOARD_SIZE; j++)
-            {
-                switch (_board[i][j])
-                {
-                case Piece::EMPTY:
-                    std::cout << "#"
-                              << "|";
-                    break;
-                case Piece::PLAYER1:
-                    std::cout << "x"
-                              << "|";
-                    break;
-                case Piece::PLAYER2:
-                    std::cout << "o"
-                              << "|";
-                    break;
-
-                default:
-                    break;
-                }
-            }
-            std::cout << std::endl;
-        }
-    }
-
-    void
     reset()
     {
         _isGameOver = false;
         _turn = true;
-        for (unsigned int i = 1; i < BOARD_SIZE - 1; i++)
-            for (unsigned int j = 1; j < BOARD_SIZE - 1; j++)
+
+        for (int i = 0; i < ROWS; i++)
+            for (int j = 0; j < COLS; j++)
                 _board[i][j] = Piece::EMPTY;
     }
 
 private:
-    Piece _board[BOARD_SIZE][BOARD_SIZE];
+    Piece _board[ROWS][COLS];
     bool _turn;
     bool _isGameOver;
+    const int _connectionLength = 4;
 
     bool
     checkConnectedPieces(Piece piece, int connectionLength) const
     {
-        int rowAdjacentPieces = 1;
-        int colAdjacentPieces = 1;
-
-        for (int i = 1; i < BOARD_SIZE - 1; i++)
-        {
-            for (int j = 1; j < BOARD_SIZE - 1; j++)
+        for (int i = 0; i < ROWS; i++)
+            for (int j = 0; j < COLS; j++)
             {
-                if (_board[i][j] == piece && _board[i][j] == _board[i][j + 1])
-                    rowAdjacentPieces++;
-                else
-                    rowAdjacentPieces = 1;
+                if (j + connectionLength <= COLS)
+                {
+                    bool connection = true;
+                    for (int c = 0; c < connectionLength; c++)
+                        connection = connection && _board[i][j + c] == piece;
 
-                if (_board[j][i] == piece && _board[j][i] == _board[j + 1][i])
-                    colAdjacentPieces++;
-                else
-                    colAdjacentPieces = 1;
+                    if (connection)
+                        return connection;
+                }
 
-                if (rowAdjacentPieces == connectionLength ||
-                    colAdjacentPieces == connectionLength)
-                    return true;
+                if (i + connectionLength <= ROWS)
+                {
+                    bool connection = true;
+                    for (int c = 0; c < connectionLength; c++)
+                        connection = connection && _board[i + c][j] == piece;
+
+                    if (connection)
+                        return connection;
+                }
+
+                if (i + connectionLength <= COLS && j + connectionLength <= ROWS)
+                {
+                    bool connection = true;
+                    for (int c = 0; c < connectionLength; c++)
+                        connection = connection && _board[i + c][j + c] == piece;
+
+                    if (connection)
+                        return connection;
+                }
+
+                if (i - connectionLength >= 0 && j + connectionLength <= COLS)
+                {
+                    bool connection = true;
+                    for (int c = 0; c < connectionLength; c++)
+                        connection = connection && _board[i - c][j + c] == piece;
+
+                    if (connection)
+                        return connection;
+                }
             }
-        }
 
         return false;
     }
 
     int
-    getFirstFreeRow(int column) const
+    getFirstFreeRow(Move column) const
     {
-        if (column > 0 && column < BOARD_SIZE - 1)
-            for (unsigned int i = 1; i < BOARD_SIZE - 1; i++)
+        if (column < COLS)
+            for (int i = ROWS - 1; i >= 0; i--)
                 if (_board[i][column] == Piece::EMPTY)
                     return i;
         return -1;

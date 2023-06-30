@@ -14,7 +14,7 @@ std::pair<int, ConnectFour::Move> minimax(
     if (game.isGameOver())
         return {game.utility(), -1};
 
-    if (game.isYourTurn())
+    if (game.isMaxTurn())
     {
         auto bestScore = std::numeric_limits<int>::min();
         auto bestMove = -1;
@@ -36,10 +36,7 @@ std::pair<int, ConnectFour::Move> minimax(
             if (beta <= alpha)
                 break;
         }
-        return {
-            bestScore,
-            bestMove,
-        };
+        return {bestScore, bestMove};
     }
     else
     {
@@ -65,9 +62,4 @@ std::pair<int, ConnectFour::Move> minimax(
         }
         return {bestScore, bestMove};
     }
-}
-
-ConnectFour::Move qLearning()
-{
-    return -1;
 }

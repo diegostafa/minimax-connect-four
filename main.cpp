@@ -1,41 +1,53 @@
+#include <string>
+
 #include <raylib.h>
 
-#include "ai_algorithms.cpp"
+#include "minimax.cpp"
 #include "connect_four.cpp"
 
+#define SCREENPADDING 100
+
+std::vector<std::pair<int, int>> G_winConnection;
 std::string G_log = "";
-int G_focusedColumn = -1;
 
 void drawLog()
 {
     const float fontSize = 30.0f;
-    auto textWidth = MeasureText(G_log.c_str(), fontSize);
+    const int textWidth = MeasureText(G_log.c_str(), fontSize);
     DrawText(G_log.c_str(), (GetScreenWidth() / 2) - textWidth / 2, 15, fontSize, WHITE);
 }
 
-void handleColumnFocus(const ConnectFour &game)
+int getFocusedColumn(const ConnectFour &game)
 {
-    G_focusedColumn = (int)GetMousePosition().x / (GetScreenWidth() / game.boardSize());
+    const int colW = (GetScreenWidth() - SCREENPADDING * 2) / game.COLS;
+    const int colFocus = ((int)GetMousePosition().x - SCREENPADDING) / colW;
+    if (colFocus >= 0 && colFocus < game.COLS)
+        return colFocus;
+
+    return -1;
 }
 
 void handleUserTurn(ConnectFour &game)
 {
-    if (!game.isYourTurn())
+    if (!game.isMaxTurn())
         return;
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-        game.makeMove(G_focusedColumn);
+        game.makeMove(getFocusedColumn(game));
 }
 
 void handleOpponentTurn(ConnectFour &game)
 {
-    if (game.isYourTurn())
+    if (game.isMaxTurn())
         return;
 
-    auto bestMove = minimax(game, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+    const auto bestMove = minimax(game, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
 
     if (bestMove.second == -1)
-        game.makeMove(game.getPossibleMoves()[0]);
+    {
+        auto possibleMoves = game.getPossibleMoves();
+        game.makeMove(possibleMoves[rand() % possibleMoves.size() - 1]);
+    }
     else
         game.makeMove(bestMove.second);
 
@@ -43,6 +55,8 @@ void handleOpponentTurn(ConnectFour &game)
         G_log = "YOU HAVE A FORCED WIN";
     else if (bestMove.first == std::numeric_limits<int>::min())
         G_log = "I HAVE A FORCED WIN";
+    else
+        G_log = "";
 }
 
 void handleGameOver(const ConnectFour &game)
@@ -57,6 +71,7 @@ void handleGameOver(const ConnectFour &game)
             G_log = "DRAW";
 
         G_log += ", PRESS \"R\" TO RESTART";
+        G_winConnection = game.getWinConnection();
     }
 }
 
@@ -66,38 +81,57 @@ void handleKeyboardInput(ConnectFour &game)
     {
         game.reset();
         G_log = "";
+        G_winConnection.clear();
     }
 }
 
 void render(const ConnectFour &game)
 {
-    int tile_w = GetScreenWidth() / game.boardSize();
-    int tile_h = GetScreenHeight() / game.boardSize();
+    const auto screenW = GetScreenWidth();
+    const auto screenH = GetScreenHeight();
+    const auto tileW = (screenW - SCREENPADDING * 2) / game.COLS;
+    const auto tileH = (screenH - SCREENPADDING * 2) / game.ROWS;
+    const auto focusedColumn = getFocusedColumn(game);
 
-    for (int i = 1; i < game.boardSize() - 1; i++)
-    {
-        for (int j = 1; j < game.boardSize() - 1; j++)
+    if (focusedColumn != -1)
+        DrawRectangle(SCREENPADDING + tileW * focusedColumn, SCREENPADDING, tileW, screenH - SCREENPADDING * 2, {255, 0, 0, 50});
+
+    for (int i = 0; i <= game.ROWS; i++)
+        for (int j = 0; j <= game.COLS; j++)
         {
-            int posX = j * tile_w;
-            int posY = (game.boardSize() - 1 - i) * tile_h;
+            const int leftX = SCREENPADDING + tileW * j;
+            const int leftY = SCREENPADDING + tileH * i;
 
-            if (j == G_focusedColumn)
-                DrawRectangle(posX, posY, tile_w, tile_h, {255, 0, 0, 50});
+            DrawLine(SCREENPADDING, leftY, screenW - SCREENPADDING, leftY, WHITE);
+            DrawLine(leftX, SCREENPADDING, leftX, screenH - SCREENPADDING, WHITE);
 
-            DrawRectangleLines(posX, posY, tile_w, tile_h, WHITE);
-
-            switch (game.at(i, j))
+            if (i < game.ROWS && j < game.COLS)
             {
-            case ConnectFour::Piece::PLAYER1:
-                DrawCircle(posX + tile_w / 2, posY + tile_h / 2, (float)std::min(tile_w, tile_h) / 3, RED);
-                break;
-            case ConnectFour::Piece::PLAYER2:
-                DrawCircle(posX + tile_w / 2, posY + tile_h / 2, (float)std::min(tile_w, tile_h) / 3, BLUE);
-                break;
-            default:
-                break;
+                const int centerX = leftX + tileW / 2;
+                const int centerY = leftY + tileH / 2;
+
+                switch (game.pieceAt(i, j))
+                {
+                case ConnectFour::Piece::PLAYER1:
+                    DrawCircle(centerX, centerY, (float)std::min(tileW, tileH) / 3, RED);
+                    break;
+                case ConnectFour::Piece::PLAYER2:
+                    DrawCircle(centerX, centerY, (float)std::min(tileW, tileH) / 3, BLUE);
+                    break;
+                default:
+                    break;
+                }
             }
         }
+
+    for (auto &&w : G_winConnection)
+    {
+        const int leftX = SCREENPADDING + tileW * w.second;
+        const int leftY = SCREENPADDING + tileH * w.first;
+        const int centerX = leftX + tileW / 2;
+        const int centerY = leftY + tileH / 2;
+        DrawRectangle(leftX, leftY, tileW, tileH, {255, 203, 0, 100});
+        DrawCircle(centerX, centerY, (float)std::min(tileW, tileH) / 3, GOLD);
     }
 }
 
@@ -107,14 +141,13 @@ int main()
 
     InitWindow(800, 800, "Minimax Connect4");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
-    SetTargetFPS(30);
+    SetTargetFPS(120);
 
     while (!WindowShouldClose())
     {
         BeginDrawing();
         ClearBackground(BLACK);
 
-        handleColumnFocus(game);
         handleKeyboardInput(game);
 
         if (!game.isGameOver())
@@ -125,8 +158,8 @@ int main()
         }
 
         render(game);
-        drawLog();
 
+        drawLog();
         EndDrawing();
     }
 
